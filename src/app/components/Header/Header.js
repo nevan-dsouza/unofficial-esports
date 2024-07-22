@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
+import { AuthContext } from '../../context/authContext';
 
 const Header = () => {
+  const { user } = useContext(AuthContext);
+
   return (
     <header className="p-4 bg-black text-white flex justify-between items-center">
       <Link href="/"><h1 className="text-4xl mx-6 font-bebas">Unofficial Esports</h1></Link>
