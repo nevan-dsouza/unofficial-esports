@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
+import { AuthContext } from '../../context/authContext';
 
 const Header = () => {
+  const { user } = useContext(AuthContext);
+
   return (
     <header className="p-4 bg-black text-white flex justify-between items-center">
       <Link href="/"><h1 className="text-4xl mx-6 font-bebas">Unofficial Esports</h1></Link>
@@ -12,7 +15,7 @@ const Header = () => {
         <Link href="/standings" className="hover:text-red-500">Standings</Link>
         <Link href="/vods" className="hover:text-red-500">VODs</Link>
         <Link href="/rewards" className="hover:text-red-500">Rewards</Link>
-        <Link href="/profile" className="hover:text-red-500">Profile</Link>
+        <Link href={user ? '/profile' : '/signin'} className="hover:text-red-500">Profile</Link>
       </nav>
     </header>
   );

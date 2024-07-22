@@ -5,8 +5,8 @@ import Link from 'next/link';
 
 const TournamentsIndex = () => {
   const tournaments = [
-    { id: 1, name: 'The Unofficial Open Cup', date: 'July 12, 2024', region: 'North America', format: '5v5', image: '/tournament-cards/open-cup.png' },
-    { id: 2, name: 'Weekend Warriors', date: 'October 15, 2024', region: 'Europe', format: '5v5', image: '/tournament-cards/weekend-warriors.png' },
+    { id: 'the-unofficial-open-cup-2024', name: 'The Unofficial Open Cup', date: 'July 12, 2024', region: 'North America', format: '5v5', image: '/tournament-cards/open-cup.png' },
+    { id: 'weekend-warriors', name: 'Weekend Warriors', date: 'October 15, 2024', region: 'Europe', format: '5v5', image: '/tournament-cards/weekend-warriors.png' },
   ];
 
   return (

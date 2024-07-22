@@ -1,14 +1,14 @@
+// src/app/layout.js
+'use client';
+
 import { Inter } from 'next/font/google';
 import './styles/globals.css';
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
+import { AuthProvider } from './context/authContext';
+import { metadata } from './metadata'
 
 const inter = Inter({ subsets: ['latin'] });
-
-export const metadata = {
-  title: 'Unofficial Esports Tournaments',
-  description: 'Community-driven Valorant tournaments',
-};
 
 export default function RootLayout({ children }) {
   return (
@@ -19,9 +19,11 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
       </head>
       <body className={inter.className}>
-        <Header />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Header />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
