@@ -13,6 +13,7 @@ const Header = () => {
         <Link href="/vods" className="hover:text-red-500">VODs</Link>
         <Link href="/rewards" className="hover:text-red-500">Rewards</Link>
         <Link href="/profile" className="hover:text-red-500">Profile</Link>
+        <Link href="/adminControl" className="hover:text-red-500">Admin Control</Link>
       </nav>
     </header>
   );

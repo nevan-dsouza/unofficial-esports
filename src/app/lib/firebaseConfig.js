@@ -1,21 +1,28 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCAAX03szdNn5MVWnsmARSK0LfLdY0j97s",
-  authDomain: "unofficial-esports.firebaseapp.com",
-  projectId: "unofficial-esports",
-  storageBucket: "unofficial-esports.appspot.com",
-  messagingSenderId: "186924423393",
-  appId: "1:186924423393:web:1a9704b36b6dc8d9337fa0",
-  measurementId: "G-VRKCE3VS6L"
+  apiKey: "AIzaSyB4JDGDFPc4hnal-uisyJ5IGXeDVsCQ_nU",
+  authDomain: "major-e50dc.firebaseapp.com",
+  projectId: "major-e50dc",
+  storageBucket: "major-e50dc.appspot.com",
+  messagingSenderId: "765980781398",
+  appId: "1:765980781398:web:eeb0584666e8967e2604f7",
+  measurementId: "G-8GJ9YCV9TE"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+let app;
+let analytics;
+let db;
+
+if (typeof window !== 'undefined' && !getApps().length) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  if (process.env.NODE_ENV !== 'development') {
+    analytics = getAnalytics(app);
+  }
+}
+
+export { app, db, analytics };
