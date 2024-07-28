@@ -1,39 +1,94 @@
+// src/app/tournaments/[tournamentId]/page.js
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAuth } from 'firebase/auth';
+import { db } from '../../lib/firebaseConfig';
+import { doc, updateDoc, arrayUnion, collection, getDoc, addDoc, setDoc } from 'firebase/firestore';
 import { getTournamentById } from '../../lib/tournamentService';
 
 const TournamentPage = ({ params }) => {
   const router = useRouter();
-  const { id } = params;
+  const { tournamentId } = params;
   const [activeTab, setActiveTab] = useState('details');
-  const [showRegisterOptions, setShowRegisterOptions] = useState(false);
   const [tournament, setTournament] = useState(null);
 
   useEffect(() => {
-    console.log('ID being used:', id); // Print the ID to the console for verification
     const fetchTournament = async () => {
       try {
-        const data = await getTournamentById(id);
+        const data = await getTournamentById(tournamentId);
         if (data) {
           setTournament(data);
         } else {
           console.error('Tournament data not found');
-          setTournament(null); // Explicitly setting it to null if not found
+          setTournament(null);
         }
       } catch (error) {
         console.error('Error fetching tournament:', error);
-        setTournament(null); // Explicitly setting it to null if an error occurs
+        setTournament(null);
       }
     };
 
     fetchTournament();
-  }, [id]);
+  }, [tournamentId]);
 
   if (tournament === null) {
     return <p>Tournament data not found</p>;
   }
+
+  const handleRegisterClick = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      alert('You must be logged in to register');
+      return;
+    }
+  
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const username = userDoc.data().username; // Ensure username is being used
+  
+      const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
+      const registrationData = {
+        teamCaptainId: user.uid,
+        teamCaptainUsername: username,
+        lineup: [
+          {
+            userId: user.uid,
+            username: username,
+            status: 'confirmed',
+            rank: '',
+            numericRank: '',
+            rankProof: '',
+            servers: [],
+          },
+          null,
+          null,
+          null,
+          null,
+        ],
+      };
+      const registrationDoc = await addDoc(registrationsRef, registrationData);
+      const registrationId = registrationDoc.id;
+  
+      // Add tournament to MyTournaments sub-collection
+      const myTournamentsRef = collection(db, 'users', user.uid, 'MyTournaments');
+      await setDoc(doc(myTournamentsRef, registrationId), {
+        tournamentId: tournamentId,
+        teamId: registrationId,
+        name: tournament.name,
+        date: tournament.date,
+      });
+  
+      alert('Registered successfully!');
+      router.push(`/tournaments/${tournamentId}/team/${registrationId}`);
+    } catch (error) {
+      console.error('Error registering for tournament:', error);
+    }
+  };  
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -74,7 +129,7 @@ const TournamentPage = ({ params }) => {
         return (
           <div>
             <h2 className="text-2xl font-bebas mb-2">Prizes</h2>
-            <p className="text-lg">{tournament.prizes.join(', ')}</p>
+            <p className="text-lg">{tournament.prizes}</p>
           </div>
         );
       case 'schedule':
@@ -103,17 +158,13 @@ const TournamentPage = ({ params }) => {
     }
   };
 
-  const handleRegisterClick = () => {
-    router.push(`/register/${id}`);
-  };
-
   return (
     <div className="container mx-auto my-8 relative">
       <div className="bg-white text-black p-8 rounded-md">
         <h1 className="text-4xl font-bebas mb-4">{tournament.name || 'Tournament'}</h1>
         <div className="flex mb-8">
           <div className="w-1/2 pr-4">
-            <img src={tournament.image || '/default-tournament.png'} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-xl" />
+            <img src={tournament.image || '/tournament-cards/default-tournament.png'} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-2xl" />
           </div>
           <div className="w-1/2 pl-4">
             <div className="flex justify-start mb-4 py-2">
@@ -129,14 +180,12 @@ const TournamentPage = ({ params }) => {
         </div>
       </div>
       <div className="absolute bottom-8 right-8">
-        {!showRegisterOptions && (
-          <button
-            onClick={handleRegisterClick}
-            className="bg-black text-white px-6 py-4 rounded-md hover:bg-red-600 transition-all duration-500 font-bebas text-2xl"
-          >
-            Register
-          </button>
-        )}
+        <button
+          onClick={handleRegisterClick}
+          className="bg-black text-white px-6 py-4 rounded-md hover:bg-red-600 transition-all duration-500 font-bebas text-2xl"
+        >
+          Register
+        </button>
       </div>
     </div>
   );
