@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebaseConfig';
-import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import Modal from '../Modal/Modal';
+import { differenceInSeconds } from 'date-fns';
 
 const LineupUI = ({ tournamentId, teamId }) => {
   const ranks = [
@@ -22,7 +25,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
   const [team, setTeam] = useState([null, null, null, null, null]);
   const [showModal, setShowModal] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [shareableLink, setShareableLink] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(null);
   const [userData, setUserData] = useState({
     rank: '',
     numericRank: '',
@@ -30,10 +33,57 @@ const LineupUI = ({ tournamentId, teamId }) => {
     servers: [],
   });
   const [teamCaptainId, setTeamCaptainId] = useState(null);
+  const [shareableLink, setShareableLink] = useState('');
+  const [activeTab, setActiveTab] = useState('username');
+  const [tournament, setTournament] = useState(null);
+  const [deadline, setDeadline] = useState(null);
+  const [countdown, setCountdown] = useState('');
 
   const auth = getAuth();
   const currentUser = auth.currentUser;
   const currentUsername = currentUser?.displayName;
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchTournamentData = async () => {
+      const tournamentDoc = await getDoc(doc(db, 'tournaments', tournamentId));
+      if (tournamentDoc.exists()) {
+        const tournamentData = tournamentDoc.data();
+        setTournament(tournamentData);
+        if (tournamentData.date) {
+          setDeadline(new Date(tournamentData.date.seconds * 1000));
+        } else {
+          console.error('Date is not defined');
+        }
+      } else {
+        console.error('Tournament document does not exist');
+      }
+    };
+    fetchTournamentData();
+  }, [tournamentId]);
+
+  useEffect(() => {
+    if (deadline) {
+      const intervalId = setInterval(() => {
+        const now = new Date();
+        const difference = differenceInSeconds(deadline, now);
+
+        if (difference <= 0) {
+          clearInterval(intervalId);
+          setCountdown('Registration has closed.');
+        } else {
+          const days = Math.floor(difference / (3600 * 24));
+          const hours = Math.floor((difference % (3600 * 24)) / 3600);
+          const minutes = Math.floor((difference % 3600) / 60);
+          const seconds = difference % 60;
+          setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+        }
+      }, 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [deadline]);
 
   useEffect(() => {
     if (currentUser) {
@@ -61,12 +111,15 @@ const LineupUI = ({ tournamentId, teamId }) => {
         setTeam(teamData.lineup);
         setTeamCaptainId(teamData.teamCaptainId);
         console.log('Fetched Team Data:', teamData.lineup);
+      } else {
+        console.error('Team document does not exist');
       }
     };
     fetchTeamData();
   }, [tournamentId, teamId]);
 
   const handleInvite = (index) => {
+    setCurrentIndex(index);
     setShowModal(true);
   };
 
@@ -123,6 +176,11 @@ const LineupUI = ({ tournamentId, teamId }) => {
         console.error('Error inviting user:', error);
       }
     }
+  };
+
+  const handleGenerateLink = () => {
+    const link = `${window.location.origin}/invite/${tournamentId}/${teamId}/${currentIndex}`;
+    setShareableLink(link);
   };
 
   const handleRankChange = (e) => {
@@ -211,8 +269,48 @@ const LineupUI = ({ tournamentId, teamId }) => {
     }
   };
 
+  const handleLeaveTeam = async () => {
+    try {
+      const teamDoc = await getDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
+      if (teamDoc.exists()) {
+        const teamData = teamDoc.data();
+        const updatedLineup = teamData.lineup.map(member => (member?.userId === currentUser.uid ? null : member));
+        
+        // Remove null members from the lineup
+        const filteredLineup = updatedLineup.filter(member => member !== null);
+
+        if (filteredLineup.length === 0) {
+          // Delete team document if no members remain
+          await deleteDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
+        } else {
+          // Update the lineup with the removed member
+          await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
+            lineup: filteredLineup
+          });
+          setTeam(filteredLineup);
+        }
+
+        // Delete the MyTournament card for the user
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'MyTournaments', tournamentId));
+        alert('You have left the team.');
+        router.push('/profile');
+      } else {
+        console.error('Team document does not exist');
+      }
+    } catch (error) {
+      console.error('Error leaving team:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto my-8 p-8 rounded-3xl shadow-lg border relative bg-black">
+      <div className="mb-8 bg-gray-100 p-6 rounded-xl shadow-lg text-black">
+        <h1 className="text-6xl font-semibold mb-4 font-bebas flex justify-center">{tournament?.name || 'Tournament Name'}</h1>
+        {deadline && (
+          <p className="text-3xl font-bebas mb-4 text-center">Registration Deadline: <span className='text-red-500'>{countdown}</span></p>
+        )}
+        <p className="text-xl font-rajdhani text-center"><span className='font-bebas text-red-500 text-2xl'>Instructions: </span>Please make sure to <strong>fill in your PLAYER INFO first</strong> and <strong>invite your team members before the deadline</strong>. Teams will be <strong>DQ'd</strong> if team members don't complete their info.</p>
+      </div>
       <div className="flex space-x-8">
         <div className="w-1/3 bg-gray-100 p-6 rounded-xl shadow-lg text-black">
           <h2 className="text-6xl font-semibold mb-4 font-bebas">Player Info</h2>
@@ -238,7 +336,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
           <label className="block mb-2 text-2xl font-bebas">Preferred Servers:
             <div className="grid grid-cols-1 gap-2">
               {servers.map(server => (
-                <div key={server} className={`cursor-pointer p-1 border rounded-md font-rajdhani text-lg ${userData.servers.includes(server) ? 'border-green-500 text-black' : 'bg-white text-black'}`} onClick={() => handleServersChange(server)}>
+                <div key={server} className={`cursor-pointer p-1 border rounded-md font-rajdhani text-lg ${userData.servers.includes(server) ? 'border-green-500 text-black bg-white' : 'bg-white text-black'}`} onClick={() => handleServersChange(server)}>
                   {server}
                   {userData.servers.includes(server) && <span className="ml-2">✔️</span>}
                 </div>
@@ -262,9 +360,9 @@ const LineupUI = ({ tournamentId, teamId }) => {
                   key={index}
                   className={`flex items-center justify-between p-3 border rounded-lg shadow-md transition-all duration-700 ease-in-out border-black ${
                     member?.status === 'pending'
-                      ? 'bg-gradient-to-r to-white from-yellow-300'
+                      ? 'bg-gradient-to-r from-white to-yellow-300'
                       : member?.status === 'confirmed'
-                      ? 'bg-gradient-to-r to-white from-green-600'
+                      ? 'bg-gradient-to-r from-white to-green-600'
                       : 'bg-gray-50'
                   }`}
                 >
@@ -315,23 +413,29 @@ const LineupUI = ({ tournamentId, teamId }) => {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-8">
+            <div className="flex justify-end mt-8">
               <button
-                onClick={() => alert('Are you sure you want to leave the team?')}
+                onClick={handleLeaveTeam}
                 className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition duration-300"
               >
                 Leave Team
-              </button>
-              <button
-                onClick={handleSubmitTeam}
-                className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300"
-              >
-                Submit Team
               </button>
             </div>
           </div>
         </div>
       </div>
+      <Modal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={handleConfirmInvite}
+        title="Invite Player"
+        inputValue={inputValue}
+        setInputValue={setInputValue}
+        handleGenerateLink={handleGenerateLink}
+        shareableLink={shareableLink}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
     </div>
   );
 };

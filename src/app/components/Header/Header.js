@@ -15,8 +15,14 @@ const Header = () => {
         <Link href="/standings" className="hover:text-red-500">Standings</Link>
         <Link href="/vods" className="hover:text-red-500">VODs</Link>
         <Link href="/rewards" className="hover:text-red-500">Rewards</Link>
-        <Link href="/profile" className="hover:text-red-500">Profile</Link>
-        <Link href="/adminControl" className="hover:text-red-500">Admin Control</Link>
+        {user ? (
+          <>
+            <Link href="/profile" className="hover:text-red-500">Profile</Link>
+            <Link href="/adminControl" className="hover:text-red-500">Admin Control</Link>
+          </>
+        ) : (
+          <Link href="/signin" className="hover:text-red-500">Log In</Link>
+        )}
       </nav>
     </header>
   );

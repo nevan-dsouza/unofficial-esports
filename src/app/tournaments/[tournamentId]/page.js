@@ -1,5 +1,3 @@
-// src/app/tournaments/[tournamentId]/page.js
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -43,13 +41,14 @@ const TournamentPage = ({ params }) => {
     const user = auth.currentUser;
     if (!user) {
       alert('You must be logged in to register');
+      router.push('/signin'); // Redirect to the sign-in page
       return;
     }
-  
+
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const username = userDoc.data().username; // Ensure username is being used
-  
+
       const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
       const registrationData = {
         teamCaptainId: user.uid,
@@ -72,23 +71,22 @@ const TournamentPage = ({ params }) => {
       };
       const registrationDoc = await addDoc(registrationsRef, registrationData);
       const registrationId = registrationDoc.id;
-  
+
       // Add tournament to MyTournaments sub-collection
       const myTournamentsRef = collection(db, 'users', user.uid, 'MyTournaments');
-      await setDoc(doc(myTournamentsRef, registrationId), {
+      await setDoc(doc(myTournamentsRef, tournamentId), {
         tournamentId: tournamentId,
         teamId: registrationId,
         name: tournament.name,
         date: tournament.date,
       });
-  
+
       alert('Registered successfully!');
       router.push(`/tournaments/${tournamentId}/team/${registrationId}`);
     } catch (error) {
       console.error('Error registering for tournament:', error);
     }
-  };  
-
+  };
 
   const renderContent = () => {
     switch (activeTab) {
