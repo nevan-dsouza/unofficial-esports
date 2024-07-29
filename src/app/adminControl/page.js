@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { collection, getDocs, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig'; // Adjust this import path if needed
 
 const categories = [
@@ -21,6 +21,7 @@ const categories = [
 export default function AdminControlPage() {
   const [tournaments, setTournaments] = useState([]);
   const [newTournament, setNewTournament] = useState({
+    id: '',
     name: '',
     game: '',
     date: '',
@@ -56,13 +57,25 @@ export default function AdminControlPage() {
 
   const addTournament = async (e) => {
     e.preventDefault();
+    const { id, name, game, date, format, region, category } = newTournament;
+
+    if (!id) {
+      alert('Please provide a Tournament ID');
+      return;
+    }
+
     // Convert date string to Firestore Timestamp
     const tournamentData = {
-      ...newTournament,
-      date: Timestamp.fromDate(new Date(newTournament.date))
+      name,
+      game,
+      date: Timestamp.fromDate(new Date(date)),
+      format,
+      region,
+      category
     };
-    await addDoc(collection(db, 'tournaments'), tournamentData);
-    setNewTournament({ name: '', game: '', date: '', format: '', region: '', category: '' });
+
+    await setDoc(doc(db, 'tournaments', id), tournamentData);
+    setNewTournament({ id: '', name: '', game: '', date: '', format: '', region: '', category: '' });
     fetchTournaments();
   };
 
@@ -78,6 +91,14 @@ export default function AdminControlPage() {
       <form onSubmit={addTournament} className="mb-8 bg-white shadow-lg rounded-lg p-6 text-black">
         <h2 className="text-2xl font-semibold mb-4">Add New Tournament</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input
+            name="id"
+            value={newTournament.id}
+            onChange={handleInputChange}
+            placeholder="Tournament ID"
+            required
+            className="p-2 border rounded text-black"
+          />
           <input
             name="name"
             value={newTournament.name}
