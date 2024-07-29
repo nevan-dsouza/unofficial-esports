@@ -38,12 +38,25 @@ const LineupUI = ({ tournamentId, teamId }) => {
   const [tournament, setTournament] = useState(null);
   const [deadline, setDeadline] = useState(null);
   const [countdown, setCountdown] = useState('');
+  const [currentUsername, setCurrentUsername] = useState('');
 
   const auth = getAuth();
   const currentUser = auth.currentUser;
-  const currentUsername = currentUser?.displayName;
 
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setCurrentUsername(userData.username); // Fetch and set the username
+        }
+      }
+    };
+    fetchCurrentUser();
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchTournamentData = async () => {
@@ -141,33 +154,37 @@ const LineupUI = ({ tournamentId, teamId }) => {
 
           updatedTeam[currentIndex] = { userId: inviteeId, username: userData.username, status: 'pending', rank: '', numericRank: '', rankProof: '', servers: [] };
 
-          await addDoc(collection(db, 'tournaments', tournamentId, 'invitations'), {
-            inviterId: currentUser.uid,
-            inviterUsername: currentUsername,
-            inviteeId,
-            inviteeUsername: userData.username,
-            timestamp: serverTimestamp(),
-            tournamentId,
-            teamId,
-            status: 'pending',
-          });
+          if (currentUsername) {
+            await addDoc(collection(db, 'tournaments', tournamentId, 'invitations'), {
+              inviterId: currentUser.uid,
+              inviterUsername: currentUsername, // Ensure this is the correct username
+              inviteeId,
+              inviteeUsername: userData.username,
+              timestamp: serverTimestamp(),
+              tournamentId,
+              teamId,
+              status: 'pending',
+            });
 
-          await addDoc(collection(db, 'users', inviteeId, 'invites'), {
-            inviterId: currentUser.uid,
-            inviterUsername: currentUsername,
-            tournamentId,
-            teamId,
-            timestamp: serverTimestamp(),
-            status: 'pending',
-          });
+            await addDoc(collection(db, 'users', inviteeId, 'invites'), {
+              inviterId: currentUser.uid,
+              inviterUsername: currentUsername, // Ensure this is the correct username
+              tournamentId,
+              teamId,
+              timestamp: serverTimestamp(),
+              status: 'pending',
+            });
 
-          await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
-            lineup: updatedTeam,
-          });
+            await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
+              lineup: updatedTeam,
+            });
 
-          setTeam(updatedTeam);
-          console.log('Team Data after Confirm Invite:', updatedTeam);
-          setShowModal(false);
+            setTeam(updatedTeam);
+            console.log('Team Data after Confirm Invite:', updatedTeam);
+            setShowModal(false);
+          } else {
+            console.error('currentUsername is not defined');
+          }
         } else {
           alert('Username not found.');
           return;
@@ -177,6 +194,48 @@ const LineupUI = ({ tournamentId, teamId }) => {
       }
     }
   };
+
+  const handleCancelInvite = async (index) => {
+    try {
+      const updatedTeam = [...team];
+      const inviteeId = updatedTeam[index]?.userId;
+      if (!inviteeId) return;
+  
+      // Remove the invite from the lineup
+      updatedTeam[index] = null;
+  
+      // Remove the invite from the tournament invitations collection
+      const invitationsQuery = query(
+        collection(db, 'tournaments', tournamentId, 'invitations'),
+        where('inviteeId', '==', inviteeId)
+      );
+      const invitationsSnapshot = await getDocs(invitationsQuery);
+      invitationsSnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref);
+      });
+  
+      // Remove the invite from the user's invites collection
+      const userInvitesQuery = query(
+        collection(db, 'users', inviteeId, 'invites'),
+        where('tournamentId', '==', tournamentId)
+      );
+      const userInvitesSnapshot = await getDocs(userInvitesQuery);
+      userInvitesSnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref);
+      });
+  
+      // Update the team lineup
+      await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
+        lineup: updatedTeam,
+      });
+  
+      setTeam(updatedTeam);
+      console.log('Invite canceled and team updated:', updatedTeam);
+    } catch (error) {
+      console.error('Error canceling invite:', error);
+    }
+  };
+  
 
   const handleGenerateLink = () => {
     const link = `${window.location.origin}/invite/${tournamentId}/${teamId}/${currentIndex}`;
@@ -253,43 +312,28 @@ const LineupUI = ({ tournamentId, teamId }) => {
     }
   };
 
-  const handleSubmitTeam = async () => {
-    if (team.every(member => member && member.status === 'confirmed' && member.rank && member.numericRank && member.rankProof && member.servers.length === 2)) {
-      try {
-        await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
-          lineup: team,
-          submitted: true
-        });
-        alert('Team submitted successfully!');
-      } catch (error) {
-        console.error('Error submitting team:', error);
-      }
-    } else {
-      alert('All confirmed members must have their info saved.');
-    }
-  };
-
   const handleLeaveTeam = async () => {
     try {
       const teamDoc = await getDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
       if (teamDoc.exists()) {
         const teamData = teamDoc.data();
         const updatedLineup = teamData.lineup.map(member => (member?.userId === currentUser.uid ? null : member));
-        
-        // Remove null members from the lineup
-        const filteredLineup = updatedLineup.filter(member => member !== null);
-
-        if (filteredLineup.length === 0) {
-          // Delete team document if no members remain
-          await deleteDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
-        } else {
+  
+        // Check if there are any members left in the lineup
+        const hasMembers = updatedLineup.some(member => member !== null);
+  
+        if (hasMembers) {
           // Update the lineup with the removed member
           await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
-            lineup: filteredLineup
+            lineup: updatedLineup
           });
-          setTeam(filteredLineup);
+        } else {
+          // Delete team document if no members remain
+          await deleteDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
         }
-
+  
+        setTeam(updatedLineup);
+  
         // Delete the MyTournament card for the user
         await deleteDoc(doc(db, 'users', currentUser.uid, 'MyTournaments', tournamentId));
         alert('You have left the team.');
@@ -300,7 +344,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
     } catch (error) {
       console.error('Error leaving team:', error);
     }
-  };
+  };  
 
   return (
     <div className="container mx-auto my-8 p-8 rounded-3xl shadow-lg border relative bg-black">

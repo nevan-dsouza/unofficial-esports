@@ -200,7 +200,7 @@ const ProfilePage = () => {
       const teamDoc = await getDoc(teamRef);
       if (teamDoc.exists()) {
         const teamData = teamDoc.data();
-        const memberIndex = teamData.lineup.findIndex(member => member.userId === currentUser.uid);
+        const memberIndex = teamData.lineup.findIndex(member => member?.userId === currentUser.uid);
         if (memberIndex !== -1) {
           teamData.lineup[memberIndex].status = 'confirmed';
           await updateDoc(teamRef, {
@@ -249,7 +249,7 @@ const ProfilePage = () => {
     } catch (error) {
       console.error('Error accepting invite:', error);
     }
-  };  
+  };    
 
   const handleDeclineInvite = async (inviteId, tournamentId, teamId) => {
     try {
@@ -262,7 +262,7 @@ const ProfilePage = () => {
       const teamDoc = await getDoc(teamRef);
       if (teamDoc.exists()) {
         const teamData = teamDoc.data();
-        const memberIndex = teamData.lineup.findIndex(member => member.userId === currentUser.uid);
+        const memberIndex = teamData.lineup.findIndex(member => member?.userId === currentUser.uid);
         if (memberIndex !== -1) {
           teamData.lineup[memberIndex] = null;
           await updateDoc(teamRef, {
@@ -408,32 +408,33 @@ const ProfilePage = () => {
       <div className="bg-gray-100 p-6 rounded-xl mb-8 text-black">
         <h2 className="text-4xl font-semibold mb-4 font-bebas">Invites</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-black">
-          {invites.map((invite) => (
-            <div key={invite.id} className="bg-white p-4 rounded-xl shadow-sm">
-              <h3 className="text-2xl font-semibold font-bebas">{invite.tournamentId}</h3>
-              <p className="text-lg">Invited by: {invite.inviterUsername}</p>
-              <p className="text-lg">{invite.timestamp ? new Date(invite.timestamp.seconds * 1000).toLocaleDateString() : 'No Date'}</p>
-              {invite.status === 'pending' && (
-                <>
-                  <button
-                    onClick={() => handleAcceptInvite(invite.id, invite.tournamentId, invite.teamId)}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300 mt-2"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineInvite(invite.id, invite.tournamentId, invite.teamId)}
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300 mt-2 ml-2"
-                  >
-                    Decline
-                  </button>
-                </>
-              )}
-              {invite.status !== 'pending' && (
-                <p className="text-lg">Status: {invite.status}</p>
-              )}
-            </div>
-          ))}
+        {invites.map((invite) => (
+          <div key={invite.id} className="bg-white p-4 rounded-xl shadow-sm">
+            <h3 className="text-2xl font-semibold font-bebas">{invite.tournamentId}</h3>
+            <p className="text-lg">Invited by: {invite.inviterUsername}</p>
+            <p className="text-lg">{invite.timestamp ? new Date(invite.timestamp.seconds * 1000).toLocaleDateString() : 'No Date'}</p>
+            {invite.status === 'pending' && (
+              <>
+                <button
+                  onClick={() => handleAcceptInvite(invite.id, invite.tournamentId, invite.teamId)}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300 mt-2"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleDeclineInvite(invite.id, invite.tournamentId, invite.teamId)}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300 mt-2 ml-2"
+                >
+                  Decline
+                </button>
+              </>
+            )}
+            {invite.status !== 'pending' && (
+              <p className="text-lg">Status: {invite.status}</p>
+            )}
+          </div>
+        ))}
+
         </div>
       </div>
       <div className="bg-black p-6 rounded-md text-white">
