@@ -25,6 +25,7 @@
     "react-dom": "^18",
     "react-firebase-hooks": "^5.1.1",
     "react-google-button": "^0.8.0",
+    "react-icons": "^5.2.1",
     "react-tournament-bracket": "^0.2.4"
   },
   "devDependencies": {
