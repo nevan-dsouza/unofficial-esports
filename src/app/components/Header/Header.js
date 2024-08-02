@@ -27,7 +27,7 @@ const Header = () => {
             <Link href="/adminControl" className={getLinkClass('/adminControl')}>Admin Control</Link>
           </>
         ) : (
-          <Link href="/signin" className={getLinkClass('/signin')}>Log In</Link>
+          <Link href="/signin" className={getLinkClass('/signin')}>Sign In</Link>
         )}
       </nav>
     </header>

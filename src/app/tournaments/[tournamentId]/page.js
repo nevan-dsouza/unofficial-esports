@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { getAuth } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebaseConfig';
-import { doc, updateDoc, arrayUnion, collection, getDoc, addDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { getTournamentById } from '../../lib/tournamentService';
 
@@ -61,10 +61,19 @@ const TournamentPage = ({ params }) => {
     }
 
     try {
+      // Check if the user is already registered in the tournament
+      const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
+      const q = query(registrationsRef, where('lineup', 'array-contains', { userId: user.uid }));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        alert('You are already registered in this tournament');
+        return;
+      }
+
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const username = userDoc.data().username; // Ensure username is being used
 
-      const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
       const registrationData = {
         teamCaptainId: user.uid,
         teamCaptainUsername: username,

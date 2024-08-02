@@ -139,21 +139,37 @@ const LineupUI = ({ tournamentId, teamId }) => {
   const handleConfirmInvite = async () => {
     if (inputValue) {
       let updatedTeam = [...team];
-
+  
       try {
         const userQuery = query(collection(db, 'users'), where('username', '==', inputValue));
         const querySnapshot = await getDocs(userQuery);
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
           const inviteeId = querySnapshot.docs[0].id;
-
+  
           if (inviteeId === currentUser.uid || team.some(member => member?.userId === inviteeId)) {
             alert('Cannot invite yourself, an existing team member, or a pending invitee.');
             return;
           }
-
+  
+          // Check if the user is already in another team in the same tournament
+          const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
+          const q = query(registrationsRef, where('lineup', 'array-contains', { userId: inviteeId }));
+          const querySnapshot = await getDocs(q);
+  
+          if (!querySnapshot.empty) {
+            // Remove the user from the existing team
+            const existingTeamDoc = querySnapshot.docs[0];
+            const existingTeamData = existingTeamDoc.data();
+            const updatedExistingLineup = existingTeamData.lineup.map(member =>
+              member?.userId === inviteeId ? null : member
+            );
+  
+            await updateDoc(existingTeamDoc.ref, { lineup: updatedExistingLineup });
+          }
+  
           updatedTeam[currentIndex] = { userId: inviteeId, username: userData.username, status: 'pending', rank: '', numericRank: '', rankProof: '', servers: [] };
-
+  
           if (currentUsername) {
             await addDoc(collection(db, 'tournaments', tournamentId, 'invitations'), {
               inviterId: currentUser.uid,
@@ -165,7 +181,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
               teamId,
               status: 'pending',
             });
-
+  
             await addDoc(collection(db, 'users', inviteeId, 'invites'), {
               inviterId: currentUser.uid,
               inviterUsername: currentUsername, // Ensure this is the correct username
@@ -174,11 +190,11 @@ const LineupUI = ({ tournamentId, teamId }) => {
               timestamp: serverTimestamp(),
               status: 'pending',
             });
-
+  
             await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
               lineup: updatedTeam,
             });
-
+  
             setTeam(updatedTeam);
             console.log('Team Data after Confirm Invite:', updatedTeam);
             setShowModal(false);
@@ -193,7 +209,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
         console.error('Error inviting user:', error);
       }
     }
-  };
+  };  
 
   const handleCancelInvite = async (index) => {
     try {

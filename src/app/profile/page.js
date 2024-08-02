@@ -361,7 +361,7 @@ const ProfilePage = () => {
   return (
     <div className="container mx-auto my-8 p-8 bg-white rounded-md shadow-lg">
       <div className="flex mb-8">
-        <div className="flex flex-col items-center mr-8">
+        <div className="flex flex-col items-center mr-8 transition duration-300">
           <div className="relative w-60 h-120 bg-black rounded-lg overflow-hidden shadow-lg transform transition-transform hover:-translate-y-2 shadow-gray-800 duration-300">
             <img src={playerCard} alt="Player Card" className="w-full h-full object-cover" />
             <div className="absolute bottom-20 w-full flex justify-center my-12">
@@ -400,7 +400,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div className="flex-1 bg-gray-100 p-6 rounded-xl mb-2 h-150 text-black border border-transparent transition duration-300 hover:border-2 hover:border-yellow-300" style={{ height: '480px' }}>
+        <div className="flex-1 p-6 rounded-xl mb-2 h-150 text-black border-2 border-black transition duration-300 bg-gradient-to-br from-yellow-100 via-white to-yellow-300" style={{ height: '480px' }}>
           <MyAwards awards={awards} toggleFavorite={toggleFavorite} />
         </div>
       </div>
