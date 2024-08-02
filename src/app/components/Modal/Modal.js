@@ -1,30 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, handleGenerateLink, shareableLink }) => {
-  const [activeTab, setActiveTab] = useState('email');
-
+const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, handleGenerateLink, shareableLink, activeTab, setActiveTab }) => {
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-1/3">
-        <h2 className="text-2xl mb-4">{title}</h2>
+      <div className="bg-white p-8 rounded-lg shadow-lg w-1/3 text-black">
+        <h2 className="text-4xl mb-4 font-bebas">{title}</h2>
         <div className="mb-4">
-          <button className={`px-4 py-2 ${activeTab === 'email' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('email')}>Email</button>
-          <button className={`px-4 py-2 ml-2 ${activeTab === 'username' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('username')}>Username</button>
+          <button className={`px-4 py-2 ${activeTab === 'username' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('username')}>Username</button>
           <button className={`px-4 py-2 ml-2 ${activeTab === 'link' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('link')}>Shareable Link</button>
         </div>
-        {activeTab === 'email' && (
-          <div>
-            <input
-              type="email"
-              placeholder="Enter player email"
-              className="w-full p-2 border border-gray-300 rounded-md mb-4"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-          </div>
-        )}
         {activeTab === 'username' && (
           <div>
             <input

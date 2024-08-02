@@ -65,7 +65,9 @@ export const AuthProvider = ({ children }) => {
         email,
         username,
         birthdate,
-        signInMethod: 'email'
+        signInMethod: 'email',
+        tournamentsPlayed: 0,
+        tournamentsWon: 0
       });
 
       setUser(user);
