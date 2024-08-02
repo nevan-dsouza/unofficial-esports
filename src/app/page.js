@@ -92,7 +92,7 @@ export default function Home() {
         <div className="container mx-auto text-center">
           <h2 className="text-6xl font-bebas mb-8">Community</h2>
           <p className="text-xl mb-8">
-            Join our Discord server to connect with other players, share your experiences, and get the latest updates. We value your feedback and look forward to growing together with the community.
+            Join our <a href="https://discord.gg/mJBKAvpuHy" className="text-red-500 underline">Discord</a> server to connect with other players, share your experiences, and get the latest updates. We value your feedback and look forward to growing together with the community.
           </p>
           <p className="text-xl mb-8">
             Our goal is to build a platform that truly caters to the needs of the gaming community. Your insights and suggestions are crucial in helping us achieve this. Let’s create something amazing together!
