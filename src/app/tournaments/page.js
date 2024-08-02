@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collection, getDocs } from 'firebase/firestore';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { db } from '../lib/firebaseConfig'; // Adjust the path as necessary
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
@@ -11,7 +12,7 @@ const categories = [
   'Intermediate Tournaments',
   'Expert Tournaments',
   'Region-Specific Tournaments',
-  'Solo/Duo/Team Tournaments',
+  'individual/Duo/Team Tournaments',
   'Themed Tournaments',
   'Seasonal Tournaments',
   'Invitational Tournaments',
@@ -22,8 +23,22 @@ const categories = [
 const TournamentsIndex = () => {
   const [tournaments, setTournaments] = useState([]);
   const [scrollPositions, setScrollPositions] = useState({});
+  const [defaultTournamentImageURL, setDefaultTournamentImageURL] = useState('');
 
   useEffect(() => {
+    const fetchDefaultImageURL = async () => {
+      try {
+        const storage = getStorage();
+        const defaultTournamentRef = ref(storage, 'default/default-tournament.png');
+        const url = await getDownloadURL(defaultTournamentRef);
+        setDefaultTournamentImageURL(url);
+      } catch (error) {
+        console.error('Error fetching default tournament image URL:', error);
+      }
+    };
+
+    fetchDefaultImageURL();
+
     const fetchTournaments = async () => {
       try {
         const tournamentsCollection = collection(db, 'tournaments');
@@ -75,7 +90,7 @@ const TournamentsIndex = () => {
                 <Link key={tournament.id} href={`/tournaments/${tournament.id}`} passHref>
                   <div className="min-w-[250px] bg-black border-4 border-white shadow-md rounded-lg overflow-hidden hover:shadow-xl transition duration-500 ease-in-out hover:bg-white hover:text-black">
                     <div className="relative h-0 pb-[100%]">
-                      <img src={tournament.image || '/tournament-cards/default-tournament.png'} alt={tournament.name} className="absolute top-0 left-0 w-full h-full object-cover rounded-t-lg"/>
+                      <img src={tournament.image || defaultTournamentImageURL} alt={tournament.name} className="absolute top-0 left-0 w-full h-full object-cover rounded-t-lg"/>
                     </div>
                     <div className="p-4">
                       <h3 className="text-2xl font-bebas mb-2">{tournament.name}</h3>

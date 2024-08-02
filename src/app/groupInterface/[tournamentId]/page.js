@@ -398,7 +398,7 @@ export default function Test1() {
                     {registrations.map((registration, index) => (
                         <div key={registration.id} className="border p-4 rounded shadow">
                             <h3 className="text-xl font-semibold mb-2">
-                                {registration.players.length > 1 ? `Team ${index + 1}` : 'Solo Player'}
+                                {registration.players.length > 1 ? `Team ${index + 1}` : 'individual Player'}
                             </h3>
                             {registration.players.map((player, playerIndex) => (
                                 <div key={playerIndex} className="mb-2">

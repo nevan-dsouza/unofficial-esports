@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getAuth } from 'firebase/auth';
 import { db } from '../../lib/firebaseConfig';
 import { doc, updateDoc, arrayUnion, collection, getDoc, addDoc, setDoc } from 'firebase/firestore';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { getTournamentById } from '../../lib/tournamentService';
 
 const TournamentPage = ({ params }) => {
@@ -12,8 +13,22 @@ const TournamentPage = ({ params }) => {
   const { tournamentId } = params;
   const [activeTab, setActiveTab] = useState('details');
   const [tournament, setTournament] = useState(null);
+  const [defaultTournamentImageURL, setDefaultTournamentImageURL] = useState('');
 
   useEffect(() => {
+    const fetchDefaultImageURL = async () => {
+      try {
+        const storage = getStorage();
+        const defaultTournamentRef = ref(storage, 'default/default-tournament.png');
+        const url = await getDownloadURL(defaultTournamentRef);
+        setDefaultTournamentImageURL(url);
+      } catch (error) {
+        console.error('Error fetching default tournament image URL:', error);
+      }
+    };
+
+    fetchDefaultImageURL();
+
     const fetchTournament = async () => {
       try {
         const data = await getTournamentById(tournamentId);
@@ -159,10 +174,10 @@ const TournamentPage = ({ params }) => {
   return (
     <div className="container mx-auto my-8 relative">
       <div className="bg-white text-black p-8 rounded-md">
-        <h1 className="text-4xl font-bebas mb-4">{tournament.name || 'Tournament'}</h1>
+        <h1 className="text-5xl font-bebas mb-4">{tournament.name || 'Tournament'}</h1>
         <div className="flex mb-8">
           <div className="w-1/2 pr-4">
-            <img src={tournament.image || '/tournament-cards/default-tournament.png'} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-2xl" />
+            <img src={tournament.image || defaultTournamentImageURL} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-2xl" />
           </div>
           <div className="w-1/2 pl-4">
             <div className="flex justify-start mb-4 py-2">
