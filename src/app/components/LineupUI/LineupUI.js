@@ -5,10 +5,12 @@ import { getAuth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebaseConfig';
 import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Modal from '../Modal/Modal';
 import { differenceInSeconds } from 'date-fns';
 
 const LineupUI = ({ tournamentId, teamId }) => {
+  const storage = getStorage();
   const ranks = [
     { label: 'Iron', value: 5 },
     { label: 'Bronze', value: 10 },
@@ -285,40 +287,50 @@ const LineupUI = ({ tournamentId, teamId }) => {
   const handleRankProofChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserData({
-          ...userData,
-          rankProof: reader.result
-        });
-      };
-      reader.readAsDataURL(file);
+      setUserData({
+        ...userData,
+        rankProof: file // Store the file object instead of the data URL
+      });
     }
   };
 
   const handleSaveUserInfo = async () => {
     if (userData.rank && userData.numericRank && userData.rankProof && userData.servers.length === 2) {
       try {
+        let rankProofUrl = userData.rankProof;
+        
+        // If rankProof is a File object, upload it to Firebase Storage
+        if (userData.rankProof instanceof File) {
+          const storageRef = ref(storage, `rankProofs/${currentUser.uid}`);
+          await uploadBytes(storageRef, userData.rankProof);
+          rankProofUrl = await getDownloadURL(storageRef);
+        }
+  
+        const updatedUserData = {
+          ...userData,
+          rankProof: rankProofUrl // Store the download URL instead of the file data
+        };
+  
         const userRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userRef, userData);
-
+        await updateDoc(userRef, updatedUserData);
+  
         const teamDoc = await getDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId));
         if (teamDoc.exists()) {
           const teamData = teamDoc.data();
           const updatedLineup = teamData.lineup.map(member => {
             if (member?.userId === currentUser.uid) {
-              return { ...member, ...userData };
+              return { ...member, ...updatedUserData };
             }
             return member;
           });
-
+  
           await updateDoc(doc(db, 'tournaments', tournamentId, 'registrations', teamId), {
             lineup: updatedLineup
           });
-
+  
           setTeam(updatedLineup);
         }
-
+  
         alert('User info saved successfully!');
       } catch (error) {
         console.error('Error saving user info:', error);

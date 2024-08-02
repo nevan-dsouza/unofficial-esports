@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebaseConfig';
-import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, addDoc, setDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { getTournamentById } from '../../lib/tournamentService';
 

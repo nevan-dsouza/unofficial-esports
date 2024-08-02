@@ -84,6 +84,7 @@ export default function AdminControlPage() {
     } else {
       setNewTournament(prev => ({ ...prev, [name]: value || 'None' }));
     }
+  };
 
   const fetchAwards = async () => {
     const awardsCollection = collection(db, 'awards');
@@ -112,14 +113,14 @@ export default function AdminControlPage() {
     e.preventDefault();
 
     // Generate tournamentId based on tournament name
-    const tournamentId = newTournament.name.toLowerCase().replace(/\s+/g, '-'); 
+    const id = newTournament.name.toLowerCase().replace(/\s+/g, '-'); 
 
   let bannerImageUrl = '';
 
   if (newTournament.bannerImage) {
     try {
       console.log("Uploading image...");
-      const storageRef = ref(storage, `tournamentBanners/${tournamentId}/${newTournament.bannerImage.name}`);
+      const storageRef = ref(storage, `tournamentBanners/${id}/${newTournament.bannerImage.name}`);
       const snapshot = await uploadBytes(storageRef, newTournament.bannerImage);
       bannerImageUrl = await getDownloadURL(snapshot.ref);
       console.log("Image uploaded successfully. URL:", bannerImageUrl);
@@ -134,13 +135,13 @@ export default function AdminControlPage() {
     const tournamentData = {
       ...newTournament,
       date: Timestamp.fromDate(new Date(newTournament.date)),
-      tournamentId: tournamentId, // Add tournamentId to the data
+      id: id, // Add tournamentId to the data
       bannerImage: bannerImageUrl
     };
 
     try {
       // Use setDoc instead of addDoc to set a custom document ID
-      await setDoc(doc(db, 'tournaments', tournamentId), tournamentData);
+      await setDoc(doc(db, 'tournaments', id), tournamentData);
       setNewTournament({ 
         // Reset your form fields here
         name: '', 
