@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, limit, startAfter, query } from 'firebase/firestore';
-import { db } from '../lib/firebaseConfig'; // Adjust the import path as necessary
+import { db } from '../lib/firebaseConfig'; 
 
 const StandingsPage = () => {
   const [users, setUsers] = useState([]);

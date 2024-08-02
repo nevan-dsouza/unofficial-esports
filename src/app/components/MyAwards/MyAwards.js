@@ -7,7 +7,7 @@ const MyAwards = ({ awards, toggleFavorite }) => {
   const [awardsState, setAwardsState] = useState(awards);
 
   useEffect(() => {
-    setAwardsState(awards); // Update state when awards prop changes
+    setAwardsState(awards); 
   }, [awards]);
 
   const handleCategoryChange = (category) => {
@@ -36,7 +36,6 @@ const MyAwards = ({ awards, toggleFavorite }) => {
 
   const isScrollable = filteredAwards.length > 10;
 
-  // Debugging: Log filtered awards
   console.log('Filtered Awards:', filteredAwards);
 
   return (

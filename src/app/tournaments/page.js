@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collection, getDocs } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { db } from '../lib/firebaseConfig'; // Adjust the path as necessary
+import { db } from '../lib/firebaseConfig'; 
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
 const categories = [

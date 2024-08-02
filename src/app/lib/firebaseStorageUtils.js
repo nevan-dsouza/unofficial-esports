@@ -16,8 +16,8 @@ export const getDefaultUrls = async () => {
   } catch (error) {
     console.error('Error fetching default URLs:', error);
     return {
-      defaultAvatarURL: '/default/default-avatar.png', // fallback URL
-      defaultPlayerCardURL: '/default/default-player-card.png', // fallback URL
+      defaultAvatarURL: '/default/default-avatar.png', 
+      defaultPlayerCardURL: '/default/default-player-card.png', 
       defaultTournamentURL: '/default/default-tournament.png'
     };
   }

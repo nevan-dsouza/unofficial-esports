@@ -72,7 +72,7 @@ const TournamentPage = ({ params }) => {
       }
 
       const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const username = userDoc.data().username; // Ensure username is being used
+      const username = userDoc.data().username;
 
       const registrationData = {
         teamCaptainId: user.uid,

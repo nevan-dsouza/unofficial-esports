@@ -1,4 +1,3 @@
-// src/app/signin/page.js
 'use client';
 
 import React, { useState, useContext, useEffect } from 'react';

@@ -7,7 +7,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getDoc, collection, getDocs, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { getAuth } from 'firebase/auth';
-import MyAwards from '../components/MyAwards/MyAwards'; // Adjust the import path as needed
+import MyAwards from '../components/MyAwards/MyAwards'; 
 
 const ProfilePage = () => {
   const { user, logout } = useContext(AuthContext);
@@ -442,7 +442,7 @@ const ProfilePage = () => {
             <div>
               <p className="text-lg mb-2">Username: {formData.username}</p>
               <p className="text-lg mb-2">Email: {formData.email}</p>
-              <button onClick={() => setIsEditing(true)} className="bg-white text-black px-6 py-2 rounded-md hover:bg-red-600 transition-all duration-300 mt-4">
+              <button onClick={() => setIsEditing(true)} className="bg-white text-black px-6 py-2 rounded-md hover:bg-gray-200 transition-all duration-300 mt-4">
                 Edit Profile
               </button>
             </div>

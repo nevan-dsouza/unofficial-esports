@@ -1,4 +1,3 @@
-// src/app/components/steps/SignUpStep2.js
 'use client';
 
 import React, { useState } from 'react';

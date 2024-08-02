@@ -173,7 +173,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
           if (currentUsername) {
             await addDoc(collection(db, 'tournaments', tournamentId, 'invitations'), {
               inviterId: currentUser.uid,
-              inviterUsername: currentUsername, // Ensure this is the correct username
+              inviterUsername: currentUsername, 
               inviteeId,
               inviteeUsername: userData.username,
               timestamp: serverTimestamp(),
@@ -184,7 +184,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
   
             await addDoc(collection(db, 'users', inviteeId, 'invites'), {
               inviterId: currentUser.uid,
-              inviterUsername: currentUsername, // Ensure this is the correct username
+              inviterUsername: currentUsername, 
               tournamentId,
               teamId,
               timestamp: serverTimestamp(),
