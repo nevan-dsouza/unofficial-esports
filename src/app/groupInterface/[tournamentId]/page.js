@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { db } from '../../lib/firebaseConfig';
-import { doc, collection, addDoc, getDocs, setDoc, deleteDoc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, collection, addDoc, getDocs, getDoc, setDoc, deleteDoc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
 export default function Test1() {
-    const [stacks, setStacks] = useState(Array(16).fill().map(() => []));
+    const [stacks, setStacks] = useState([]);
     const [playerNames, setPlayerNames] = useState('');
     const [playerRanks, setPlayerRanks] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [serverPreference1, setServerPreference1] = useState('');
     const [serverPreference2, setServerPreference2] = useState('');
     const [registrations, setRegistrations] = useState([]);
+    const [numberOfTeams, setNumberOfTeams] = useState(0);
+    const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(3); // New state for max players per team
     
     const params = useParams();
     const tournamentId = params.tournamentId;
@@ -29,15 +31,16 @@ export default function Test1() {
     
         const unsubscribe = onSnapshot(registrationsRef, (snapshot) => {
             const registrationsData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            console.log('Registrations data:', registrationsData); // Add this line
             setRegistrations(registrationsData);
             formTeams(registrationsData);
         });
     
         return () => unsubscribe();
-    }, [tournamentId]);
+    }, [tournamentId, numberOfTeams, maxPlayersPerTeam]);
 
     useEffect(() => {
-        fetchGroups();
+        fetchTournamentDetails();
     }, [tournamentId]);
 
     const serverOptions = [
@@ -48,12 +51,36 @@ export default function Test1() {
         "US Central (Illinois)",
         "US Central (Georgia)"
     ];
-    
-    
+
     function calculatePingScore(playerServers, stackServers) {
         const commonServers = playerServers.filter(server => stackServers.includes(server));
         return commonServers.length * 5; // 10 points for each common server
     }
+
+    const fetchTournamentDetails = async () => {
+        try {
+          const tournamentRef = doc(db, 'tournaments', tournamentId);
+          const tournamentSnap = await getDoc(tournamentRef);
+          
+          if (tournamentSnap.exists()) {
+            const tournamentData = tournamentSnap.data();
+            const numTeams = parseInt(tournamentData.numberOfTeams);
+            const maxPlayers = parseInt(tournamentData.maxPlayersPerTeam);
+            console.log("Tournament data:", tournamentData);
+            console.log("Number of teams:", numTeams);
+            console.log("Max players per team:", maxPlayers);
+            setNumberOfTeams(numTeams);
+            setMaxPlayersPerTeam(maxPlayers);
+            setStacks(Array(numTeams).fill().map(() => []));
+            
+            fetchGroups();
+          } else {
+            console.log("No such tournament! ID:", tournamentId);
+          }
+        } catch (error) {
+          console.error("Error fetching tournament details:", error);
+        }
+    };
 
     async function fetchGroups() {
         const tournamentRef = doc(db, 'tournaments', tournamentId);
@@ -63,10 +90,16 @@ export default function Test1() {
         setStacks(groups.map(g => g.players || []));
     }
 
-    function getAverageRank(stack) {
-        if (stack.length === 0) return 0;
-        const sum = stack.reduce((acc, player) => acc + player.numericRank, 0);
-        return sum / stack.length;
+    function getAverageRank(players) {
+        const validPlayers = players.filter(player => player !== null && player.numericRank !== undefined);
+        if (validPlayers.length === 0) return 0;
+    
+        const sum = validPlayers.reduce((acc, player) => {
+            const rank = rankToNumber[player.rank] || player.numericRank;
+            return acc + (typeof rank === 'number' ? rank : 0);
+        }, 0);
+    
+        return sum / validPlayers.length;
     }
 
     function findBestStack(players, currentStacks) {
@@ -76,14 +109,14 @@ export default function Test1() {
         const playerServers = players.flatMap(p => p.servers);
     
         for (let i = 0; i < currentStacks.length; i++) {
-            if (currentStacks[i].length + players.length <= 5) {
-                const stackAvgRank = getAverageRank(currentStacks[i]);
-                const stackServers = currentStacks[i].flatMap(p => p.servers);
+            const validPlayers = currentStacks[i].filter(p => p !== null);
+            if (validPlayers.length + players.length <= maxPlayersPerTeam) {
+                const stackAvgRank = getAverageRank(validPlayers);
+                const stackServers = validPlayers.flatMap(p => p.servers);
                 
                 const rankDifference = Math.abs(stackAvgRank - playerAvgRank);
                 const pingScore = calculatePingScore(playerServers, stackServers);
                 
-                // Weighted difference (ping is twice as important as rank)
                 const weightedDifference = (rankDifference * 1) + (20 - pingScore) * 2;
     
                 if (weightedDifference < smallestDifference) {
@@ -95,6 +128,7 @@ export default function Test1() {
     
         return bestStack;
     }
+
     
     async function handleSubmit(e) {
         e.preventDefault();
@@ -111,26 +145,48 @@ export default function Test1() {
             return;
         }
     
-        const players = names.map((name, index) => ({
-            id: `${name}-${Date.now()}`,
-            name,
-            rank: ranks[index],
-            numericRank: rankToNumber[ranks[index]] || 0,
-            servers: [serverPreference1, serverPreference2]
-        }));
-    
-        // Check if this team size is allowed before adding to the database
-        const bestStack = findBestStack(players, stacks);
-        if (bestStack === -1) {
-            setErrorMessage(`Teams of ${players.length} are not allowed at this time.`);
+        if (names.length > maxPlayersPerTeam) {
+            setErrorMessage(`Maximum ${maxPlayersPerTeam} players allowed per team.`);
             return;
         }
+    
+        const lineup = names.map((name, index) => ({
+            id: `${name}-${Date.now()}-${index}`, // Ensure each player has a unique id
+            username: name,
+            rank: ranks[index],
+            numericRank: (rankToNumber[ranks[index]] || 0).toString(),
+            rankProof: "Not Required - added by admin",
+            servers: [serverPreference1, serverPreference2],
+            status: "added by admin",
+        }));
+    
+        // Pad the lineup array with null values to match the desired structure
+        while (lineup.length < 5) {
+            lineup.push(null);
+        }
+        
+        const validPlayers = lineup.filter(p => p !== null);
+        const bestStack = findBestStack(validPlayers, stacks);
+        if (bestStack === -1) {
+            setErrorMessage(`Teams of ${validPlayers.length} are not allowed at this time.`);
+            return;
+        }
+
     
         try {
             const tournamentRef = doc(db, 'tournaments', tournamentId);
             const registrationsRef = collection(tournamentRef, 'registrations');
+            
+            // Ensure teamCaptainId and teamCaptainUsername are set
+            const teamCaptain = lineup[0];
+            if (!teamCaptain) {
+                throw new Error("No team captain found in lineup");
+            }
+    
             await addDoc(registrationsRef, {
-                players,
+                lineup,
+                teamCaptainId: teamCaptain.id,
+                teamCaptainUsername: teamCaptain.username,
                 timestamp: new Date()
             });
     
@@ -139,6 +195,7 @@ export default function Test1() {
             setServerPreference1('');
             setServerPreference2('');
             setErrorMessage('');
+            console.log("Registration submitted successfully");
         } catch (error) {
             console.error("Error adding registration: ", error);
             setErrorMessage('Failed to register. Please try again.');
@@ -146,26 +203,25 @@ export default function Test1() {
     }
 
     async function formTeams(registrations) {
-        let newStacks = Array(16).fill().map(() => []);
+        if (numberOfTeams === 0) {
+            console.log("Number of teams is 0, skipping team formation");
+            return;
+        }
         
-        registrations.sort((a, b) => b.players.length - a.players.length);
+        let newStacks = Array(numberOfTeams).fill().map(() => []);
+        
+        // Sort registrations by team size (largest to smallest)
+        registrations.sort((a, b) => (b.lineup.filter(p => p !== null).length - a.lineup.filter(p => p !== null).length));
     
         for (let registration of registrations) {
-            const bestStack = findBestStack(registration.players, newStacks);
+            const players = registration.lineup.filter(p => p !== null);
+    
+            const bestStack = findBestStack(players, newStacks);
             if (bestStack === -1) {
                 continue; // Skip this registration if it can't be placed
             }
             
-            if (newStacks[bestStack].length + registration.players.length > 5) {
-                const nextBestStack = findBestStack(registration.players.slice(0, 5 - newStacks[bestStack].length), newStacks);
-                if (nextBestStack === -1) {
-                    continue; // Skip if we can't place the remaining players
-                }
-                newStacks[bestStack] = [...newStacks[bestStack], ...registration.players.slice(0, 5 - newStacks[bestStack].length)];
-                newStacks[nextBestStack] = [...newStacks[nextBestStack], ...registration.players.slice(5 - newStacks[bestStack].length)];
-            } else {
-                newStacks[bestStack] = [...newStacks[bestStack], ...registration.players];
-            }
+            newStacks[bestStack] = [...newStacks[bestStack], ...players];
         }
     
         setStacks(newStacks);
@@ -186,21 +242,26 @@ export default function Test1() {
 
     const onDragEnd = async (result) => {
         if (!result.destination) return;
-
+    
         const sourceStack = parseInt(result.source.droppableId);
         const destStack = parseInt(result.destination.droppableId);
-
+    
         const newStacks = [...stacks];
         
-        // Check if the destination stack would exceed 5 players
-        if (newStacks[destStack].length >= 5) {
-            setErrorMessage("Cannot move player. Destination stack is full.");
+        const validPlayersInDestStack = newStacks[destStack].filter(p => p !== null);
+        if (validPlayersInDestStack.length >= maxPlayersPerTeam) {
+            setErrorMessage(`Cannot move player. Destination stack is full (max ${maxPlayersPerTeam} players).`);
             return;
         }
-
+    
         const [reorderedItem] = newStacks[sourceStack].splice(result.source.index, 1);
         newStacks[destStack].splice(result.destination.index, 0, reorderedItem);
-
+    
+        // Remove any null values from the stacks
+        newStacks.forEach((stack, index) => {
+            newStacks[index] = stack.filter(player => player !== null);
+        });
+    
         setStacks(newStacks);
         await updateGrouping(newStacks);
     };
@@ -220,19 +281,27 @@ export default function Test1() {
             // Remove from registrations collection
             const tournamentRef = doc(db, 'tournaments', tournamentId);
             const registrationsRef = collection(tournamentRef, 'registrations');
-            const q = query(registrationsRef, where("players", "array-contains", playerToRemove));
-            const querySnapshot = await getDocs(q);
+            
+            // Query all registrations (we'll filter in JavaScript)
+            const querySnapshot = await getDocs(registrationsRef);
     
             querySnapshot.forEach(async (doc) => {
                 const registration = doc.data();
-                const updatedPlayers = registration.players.filter(p => p.id !== playerToRemove.id);
+                
+                // Check if the player is in this registration's lineup
+                const playerIndex = registration.lineup.findIndex(p => p && p.id === playerToRemove.id);
+                
+                if (playerIndex !== -1) {
+                    const updatedLineup = [...registration.lineup];
+                    updatedLineup[playerIndex] = null; // Set to null instead of removing
     
-                if (updatedPlayers.length === 0) {
-                    // If no players left in this registration, delete the document
-                    await deleteDoc(doc.ref);
-                } else {
-                    // Otherwise, update the document with the remaining players
-                    await updateDoc(doc.ref, { players: updatedPlayers });
+                    // If all players in lineup are null, delete the document
+                    if (updatedLineup.every(p => p === null)) {
+                        await deleteDoc(doc.ref);
+                    } else {
+                        // Otherwise, update the document with the updated lineup
+                        await updateDoc(doc.ref, { lineup: updatedLineup });
+                    }
                 }
             });
     
@@ -249,17 +318,31 @@ export default function Test1() {
             const teamsCollectionRef = collection(tournamentRef, 'teams');
     
             for (let i = 0; i < stacks.length; i++) {
-                if (stacks[i].length > 0) {
-                    const teamAverage = getAverageRank(stacks[i]);
-                    await addDoc(teamsCollectionRef, {
-                        teamName: `Team ${i + 1}`,
+                const validPlayers = stacks[i].filter(player => player !== null);
+                if (validPlayers.length > 0) {
+                    const teamName = `Team ${i + 1}`;
+                    const teamAverage = getAverageRank(validPlayers);
+                    const teamDocRef = doc(teamsCollectionRef, teamName);
+                    
+                    const teamData = {
+                        teamName: teamName,
                         teamNumber: i + 1,
                         teamAverage: teamAverage,
-                        players: stacks[i].map(player => ({
-                            name: player.name,
-                            rank: player.rank
+                        players: validPlayers.map(player => ({
+                            id: player.id,
+                            username: player.username,
+                            rank: player.rank,
+                            numericRank: player.numericRank,
+                            servers: player.servers
                         }))
-                    });
+                    };
+    
+                    // Remove any undefined values
+                    Object.keys(teamData).forEach(key => 
+                        teamData[key] === undefined && delete teamData[key]
+                    );
+    
+                    await setDoc(teamDocRef, teamData);
                 }
             }
     
@@ -273,6 +356,7 @@ export default function Test1() {
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-3xl font-bold mb-4">Team Formation</h1>
+            <p className="text-xl mb-4">Number of Teams: {numberOfTeams}</p>
             <form onSubmit={handleSubmit} className="mb-8">
                 <div className="mb-4">
                     <label htmlFor="playerNames" className="block mb-2">Player Names (comma-separated):</label>
@@ -339,7 +423,7 @@ export default function Test1() {
                                     className="border p-4 rounded shadow min-h-[100px]"
                                 >
                                     <h3 className="text-xl font-semibold mb-2">Stack {index + 1}</h3>
-                                    {stack.map((player, playerIndex) => (
+                                    {stack.filter(player => player !== null).map((player, playerIndex) => (
                                         <Draggable key={player.id} draggableId={player.id} index={playerIndex}>
                                             {(provided) => (
                                                 <div
@@ -349,12 +433,12 @@ export default function Test1() {
                                                     className="mb-1 p-2 bg-gray-100 rounded flex justify-between items-center"
                                                 >
                                                     <div className="text-black">
-                                                        <div>{player.name} ({player.rank})</div>
+                                                        <div>{player.username} ({player.rank})</div>
                                                         <div className="text-xs text-gray-600">
                                                             Servers: {player.servers.join(', ')}
                                                         </div>
                                                         <div className="text-xs text-gray-600">
-                                                            Ping Score: {calculatePingScore(player.servers, stack.flatMap(p => p.servers))}
+                                                            Ping Score: {calculatePingScore(player.servers, stack.flatMap(p => p?.servers || []))}
                                                         </div>
                                                     </div>
                                                     <button 
@@ -370,11 +454,11 @@ export default function Test1() {
                                     {provided.placeholder}
                                     {stack.length > 0 && (
                                         <div className="mt-2 text-sm">
-                                            <p className="font-bold">Avg Rank: {getAverageRank(stack).toFixed(2)}</p>
+                                            <p className="font-bold">Avg Rank: {getAverageRank(stack.filter(p => p !== null)).toFixed(2)}</p>
                                             <p className="font-bold">
                                                 Avg Ping Score: {
-                                                    (stack.reduce((sum, player) => 
-                                                        sum + calculatePingScore(player.servers, stack.flatMap(p => p.servers)), 0) / stack.length
+                                                    (stack.filter(p => p !== null).reduce((sum, player) => 
+                                                        sum + calculatePingScore(player.servers, stack.flatMap(p => p?.servers || [])), 0) / stack.filter(p => p !== null).length
                                                     ).toFixed(2)
                                                 }
                                             </p>
@@ -394,25 +478,26 @@ export default function Test1() {
                 Submit Teams to Database
             </button>
             <h2 className="text-2xl font-bold mb-4">Registered Teams and Players</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {registrations.map((registration, index) => (
-                        <div key={registration.id} className="border p-4 rounded shadow">
-                            <h3 className="text-xl font-semibold mb-2">
-                                {registration.players.length > 1 ? `Team ${index + 1}` : 'Solo Player'}
-                            </h3>
-                            {registration.players.map((player, playerIndex) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {registrations.map((registration, index) => (
+                    <div key={registration.id} className="border p-4 rounded shadow">
+                        <h3 className="text-xl font-semibold mb-2">
+                            {registration.lineup && registration.lineup.filter(p => p !== null).length > 1 ? `Team ${index + 1}` : 'Solo Player'}
+                        </h3>
+                        {/* Accessing players from the lineup array */}
+                        {registration.lineup && registration.lineup.map((player, playerIndex) => {
+                            // Skip rendering null entries in the lineup
+                            if (player === null) return null; 
+                            return (
                                 <div key={playerIndex} className="mb-2">
-                                    <div>{player.name} ({player.rank})</div>
-                                    <div className="text-xs text-gray-600">
-                                        Servers: {player.servers.join(', ')}
-                                    </div>
+                                    <p>Username: {player.username}</p>
+                                    <p>Status: {player.status}</p>
+                                    {/* Add more player details as needed */}
                                 </div>
-                            ))}
-                            <div className="text-sm text-gray-600 mt-2">
-                                Registered: {new Date(registration.timestamp.seconds * 1000).toLocaleString()}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                            );
+                        })} {/* <-- Closing bracket added here */}
+                    </div>
+                ))}
+            </div>
             </div>
         );}
