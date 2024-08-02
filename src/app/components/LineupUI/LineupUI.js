@@ -157,11 +157,11 @@ const LineupUI = ({ tournamentId, teamId }) => {
           // Check if the user is already in another team in the same tournament
           const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
           const q = query(registrationsRef, where('lineup', 'array-contains', { userId: inviteeId }));
-          const querySnapshot = await getDocs(q);
+          const regQuerySnapshot = await getDocs(q);
   
-          if (!querySnapshot.empty) {
+          if (!regQuerySnapshot.empty) {
             // Remove the user from the existing team
-            const existingTeamDoc = querySnapshot.docs[0];
+            const existingTeamDoc = regQuerySnapshot.docs[0];
             const existingTeamData = existingTeamDoc.data();
             const updatedExistingLineup = existingTeamData.lineup.map(member =>
               member?.userId === inviteeId ? null : member
