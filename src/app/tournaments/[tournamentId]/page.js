@@ -1,39 +1,116 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getAuth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { db } from '../../lib/firebaseConfig';
+import { doc, updateDoc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { getTournamentById } from '../../lib/tournamentService';
 
 const TournamentPage = ({ params }) => {
   const router = useRouter();
-  const { id } = params;
+  const { tournamentId } = params;
   const [activeTab, setActiveTab] = useState('details');
-  const [showRegisterOptions, setShowRegisterOptions] = useState(false);
   const [tournament, setTournament] = useState(null);
+  const [defaultTournamentImageURL, setDefaultTournamentImageURL] = useState('');
 
   useEffect(() => {
-    console.log('ID being used:', id); // Print the ID to the console for verification
+    const fetchDefaultImageURL = async () => {
+      try {
+        const storage = getStorage();
+        const defaultTournamentRef = ref(storage, 'default/default-tournament.png');
+        const url = await getDownloadURL(defaultTournamentRef);
+        setDefaultTournamentImageURL(url);
+      } catch (error) {
+        console.error('Error fetching default tournament image URL:', error);
+      }
+    };
+
+    fetchDefaultImageURL();
+
     const fetchTournament = async () => {
       try {
-        const data = await getTournamentById(id);
+        const data = await getTournamentById(tournamentId);
         if (data) {
           setTournament(data);
         } else {
           console.error('Tournament data not found');
-          setTournament(null); // Explicitly setting it to null if not found
+          setTournament(null);
         }
       } catch (error) {
         console.error('Error fetching tournament:', error);
-        setTournament(null); // Explicitly setting it to null if an error occurs
+        setTournament(null);
       }
     };
 
     fetchTournament();
-  }, [id]);
+  }, [tournamentId]);
 
   if (tournament === null) {
     return <p>Tournament data not found</p>;
   }
+
+  const handleRegisterClick = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      alert('You must be logged in to register');
+      router.push('/signin'); // Redirect to the sign-in page
+      return;
+    }
+
+    try {
+      // Check if the user is already registered in the tournament
+      const registrationsRef = collection(db, 'tournaments', tournamentId, 'registrations');
+      const q = query(registrationsRef, where('lineup', 'array-contains', { userId: user.uid }));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        alert('You are already registered in this tournament');
+        return;
+      }
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const username = userDoc.data().username;
+
+      const registrationData = {
+        teamCaptainId: user.uid,
+        teamCaptainUsername: username,
+        lineup: [
+          {
+            userId: user.uid,
+            username: username,
+            status: 'confirmed',
+            rank: '',
+            numericRank: '',
+            rankProof: '',
+            servers: [],
+          },
+          null,
+          null,
+          null,
+          null,
+        ],
+      };
+      const registrationDoc = await addDoc(registrationsRef, registrationData);
+      const registrationId = registrationDoc.id;
+
+      // Add tournament to MyTournaments sub-collection
+      const myTournamentsRef = collection(db, 'users', user.uid, 'MyTournaments');
+      await setDoc(doc(myTournamentsRef, tournamentId), {
+        tournamentId: tournamentId,
+        teamId: registrationId,
+        name: tournament.name,
+        date: tournament.date,
+      });
+
+      alert('Registered successfully!');
+      router.push(`/tournaments/${tournamentId}/team/${registrationId}`);
+    } catch (error) {
+      console.error('Error registering for tournament:', error);
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -74,7 +151,7 @@ const TournamentPage = ({ params }) => {
         return (
           <div>
             <h2 className="text-2xl font-bebas mb-2">Prizes</h2>
-            <p className="text-lg">{tournament.prizes.join(', ')}</p>
+            <p className="text-lg">{tournament.prizes}</p>
           </div>
         );
       case 'schedule':
@@ -103,17 +180,13 @@ const TournamentPage = ({ params }) => {
     }
   };
 
-  const handleRegisterClick = () => {
-    router.push(`/register/${id}`);
-  };
-
   return (
     <div className="container mx-auto my-8 relative">
       <div className="bg-white text-black p-8 rounded-md">
-        <h1 className="text-4xl font-bebas mb-4">{tournament.name || 'Tournament'}</h1>
+        <h1 className="text-5xl font-bebas mb-4">{tournament.name || 'Tournament'}</h1>
         <div className="flex mb-8">
           <div className="w-1/2 pr-4">
-            <img src={tournament.image || '/default-tournament.png'} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-xl" />
+            <img src={tournament.image || defaultTournamentImageURL} alt={tournament.name || 'Tournament'} className="w-full h-full object-cover rounded-2xl" />
           </div>
           <div className="w-1/2 pl-4">
             <div className="flex justify-start mb-4 py-2">
@@ -129,14 +202,12 @@ const TournamentPage = ({ params }) => {
         </div>
       </div>
       <div className="absolute bottom-8 right-8">
-        {!showRegisterOptions && (
-          <button
-            onClick={handleRegisterClick}
-            className="bg-black text-white px-6 py-4 rounded-md hover:bg-red-600 transition-all duration-500 font-bebas text-2xl"
-          >
-            Register
-          </button>
-        )}
+        <button
+          onClick={handleRegisterClick}
+          className="bg-black text-white px-6 py-4 rounded-md hover:bg-red-600 transition-all duration-500 font-bebas text-2xl"
+        >
+          Register
+        </button>
       </div>
     </div>
   );

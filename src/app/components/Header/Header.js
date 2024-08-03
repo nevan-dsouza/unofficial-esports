@@ -4,6 +4,7 @@
 import React, { useContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { AuthContext } from '../../context/authContext';
 
 const Header = () => {
@@ -16,6 +17,7 @@ const Header = () => {
 
   return (
     <header className="p-4 bg-black text-white flex justify-between items-center">
+      <Link href="/" className="text-4xl mx-6 font-bebas">Unofficial Esports</Link>
       <Link href="/" className="text-4xl mx-6 font-bebas">Unofficial Esports</Link>
       <nav className="space-x-4 font-bebas text-2xl">
         <Link href="/tournaments" className={getLinkClass('/tournaments')}>Tournaments</Link>

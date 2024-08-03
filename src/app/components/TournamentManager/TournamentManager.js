@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig'; // Adjust this import based on your Firebase setup
+import { db } from '../firebase/firebaseConfig'; 
 
 const TournamentManager = () => {
   const [tournaments, setTournaments] = useState([]);

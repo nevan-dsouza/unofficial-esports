@@ -14,7 +14,7 @@ const QuickLink = () => {
       </div>
       <div className="flex items-center">
       <button className="bg-red-600 text-white px-6 py-4 text-2xl font-bold hover:bg-red-500 h-full" style={{ backgroundColor: '#e42d3e' }}>
-          <a href="/tournaments/1">REGISTER</a>
+          <a href="/tournaments/the-unofficial-open-cup-2024">REGISTER</a>
         </button>
         <button onClick={() => setIsVisible(false)} className="text-white-400 hover:text-gray-200 text-2xl ml-4">&times;</button>
       </div>
