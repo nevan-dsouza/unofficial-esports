@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { collection, getDocs, addDoc, setDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db, storage } from '../lib/firebaseConfig'; // Adjust this import path if needed
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import AdminRoute from '../components/AdminRoute';
 
 const categories = [
   'Beginner Tournaments',
@@ -19,7 +20,7 @@ const categories = [
   'Sponsored Tournaments'
 ];
 
-export default function AdminControlPage() {
+function AdminControlPage() {
   const [tournaments, setTournaments] = useState([]);
   const [newTournament, setNewTournament] = useState({
     name: '',
@@ -329,3 +330,6 @@ export default function AdminControlPage() {
     </div>
   );
 }
+
+
+export default AdminRoute(AdminControlPage);

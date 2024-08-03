@@ -9,6 +9,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,18 +17,23 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
-          setUser({ ...user, ...userDoc.data() });
+          const userData = userDoc.data();
+          setUser({ ...user, ...userData });
+          setUserRole(userData.role || 'user');
         } else {
           setUser(user);
+          setUserRole('user');
         }
       } else {
         setUser(null);
+        setUserRole(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
 
   const signInWithGoogle = async () => {
     try {
@@ -65,10 +71,14 @@ export const AuthProvider = ({ children }) => {
         email,
         username,
         birthdate,
-        signInMethod: 'email'
+        signInMethod: 'email',
+        tournamentsPlayed: 0,
+        tournamentsWon: 0,
+        role: 'user' 
       });
 
       setUser(user);
+      setUserRole('user');
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
         throw new Error('This email is already associated with another account.');
@@ -108,6 +118,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        userRole,
         loading,
         signInWithGoogle,
         signUpWithEmailAndPassword,
