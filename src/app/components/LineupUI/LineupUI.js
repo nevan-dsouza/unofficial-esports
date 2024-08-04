@@ -36,11 +36,13 @@ const LineupUI = ({ tournamentId, teamId }) => {
   });
   const [teamCaptainId, setTeamCaptainId] = useState(null);
   const [shareableLink, setShareableLink] = useState('');
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [activeTab, setActiveTab] = useState('username');
   const [tournament, setTournament] = useState(null);
   const [deadline, setDeadline] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [currentUsername, setCurrentUsername] = useState('');
+  
 
   const auth = getAuth();
   const currentUser = auth.currentUser;
@@ -135,6 +137,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
 
   const handleInvite = (index) => {
     setCurrentIndex(index);
+    setShareableLink(''); // Clear any existing link
     setShowModal(true);
   };
 
@@ -253,11 +256,17 @@ const LineupUI = ({ tournamentId, teamId }) => {
       console.error('Error canceling invite:', error);
     }
   };
-  
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareableLink);
+    // Optionally, show a notification that the link was copied
+  };
 
   const handleGenerateLink = () => {
-    const link = `${window.location.origin}/invite/${tournamentId}/${teamId}/${currentIndex}`;
-    setShareableLink(link);
+    if (currentIndex !== null) {
+      const link = `${window.location.origin}/tournaments/${tournamentId}/team/${teamId}/invite/${currentIndex}`;
+      setShareableLink(link);
+    }
   };
 
   const handleRankChange = (e) => {
@@ -463,7 +472,7 @@ const LineupUI = ({ tournamentId, teamId }) => {
                   ) : !member && index !== 0 ? (
                     <button
                       onClick={() => handleInvite(index)}
-                      className="ml-4 bg-blue-500 text-white font-bebas text-2xl px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+                      className="ml-4 bg-blue-500 text-white font-bebas text-2xl px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -505,8 +514,27 @@ const LineupUI = ({ tournamentId, teamId }) => {
         setInputValue={setInputValue}
         handleGenerateLink={handleGenerateLink}
         shareableLink={shareableLink}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        currentIndex={currentIndex}
+      />
+
+      <Modal
+        show={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        title="Shareable Invite Link"
+        content={
+          <div className="text-center">
+            <p className="mb-4 text-lg break-all">{shareableLink}</p>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(shareableLink);
+                // Optionally, show a notification that the link was copied
+              }}
+              className="bg-blue-500 text-white font-bebas text-2xl px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            >
+              Copy Link
+            </button>
+          </div>
+        }
       />
     </div>
   );

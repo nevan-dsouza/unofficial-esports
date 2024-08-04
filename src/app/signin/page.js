@@ -2,10 +2,12 @@
 
 import React, { useState, useContext, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthContext } from '../context/authContext';
 
 const SignInPage = () => {
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const { signInWithGoogle, signInWithEmail, user } = useContext(AuthContext);
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -16,25 +18,34 @@ const SignInPage = () => {
     if (user) {
       if (user.firstTime) {
         router.push('/username');
+      } else if (redirect) {
+        router.push(redirect);
       } else {
         router.push('/profile');
       }
     }
-  }, [user, router]);
+  }, [user, router, redirect]);
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
+      if (redirect) {
+        router.push(redirect);
+      }
     } catch (error) {
       setError(error.message);
     }
   };
-
+  
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     try {
       await signInWithEmail(email, password);
-      router.push('/profile');
+      if (redirect) {
+        router.push(redirect);
+      } else {
+        router.push('/profile');
+      }
     } catch (error) {
       setError(error.message);
     }

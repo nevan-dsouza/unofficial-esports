@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
-const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, handleGenerateLink, shareableLink, activeTab, setActiveTab }) => {
+const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, handleGenerateLink, shareableLink, currentIndex }) => {
+  const [activeTab, setActiveTab] = useState('username');
+  
   if (!show) return null;
 
   return (
@@ -8,8 +10,18 @@ const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, han
       <div className="bg-white p-8 rounded-lg shadow-lg w-1/3 text-black">
         <h2 className="text-4xl mb-4 font-bebas">{title}</h2>
         <div className="mb-4">
-          <button className={`px-4 py-2 ${activeTab === 'username' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('username')}>Username</button>
-          <button className={`px-4 py-2 ml-2 ${activeTab === 'link' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('link')}>Shareable Link</button>
+          <button 
+            className={`px-4 py-2 ${activeTab === 'username' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
+            onClick={() => setActiveTab('username')}
+          >
+            Username
+          </button>
+          <button 
+            className={`px-4 py-2 ml-2 ${activeTab === 'link' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
+            onClick={() => setActiveTab('link')}
+          >
+            Shareable Link
+          </button>
         </div>
         {activeTab === 'username' && (
           <div>
@@ -49,9 +61,11 @@ const Modal = ({ show, onClose, onConfirm, title, inputValue, setInputValue, han
             )}
           </div>
         )}
-        <div className="flex justify-end">
+        <div className="flex justify-end mt-4">
           <button onClick={onClose} className="bg-gray-200 px-4 py-2 rounded-lg mr-2">Close</button>
-          <button onClick={onConfirm} className="bg-blue-500 text-white px-4 py-2 rounded-lg">Confirm</button>
+          {activeTab === 'username' && (
+            <button onClick={onConfirm} className="bg-blue-500 text-white px-4 py-2 rounded-lg">Confirm</button>
+          )}
         </div>
       </div>
     </div>
